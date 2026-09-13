@@ -7,7 +7,6 @@ class TwoBufferReader:
         self,
         source: str,
         buffer_size: int = 32,
-        trace: bool = False,
     ) -> None:
 
         if buffer_size < 4:
@@ -18,8 +17,6 @@ class TwoBufferReader:
         self.source = source
 
         self.buffer_size = buffer_size
-
-        self.trace = trace
 
         self.begin = 0
         self.forward = 0
@@ -94,8 +91,6 @@ class TwoBufferReader:
 
             if self.buffer_a_start < self.buffer_b_start:
 
-                old_start = self.buffer_a_start
-
                 self.buffer_a_start = block_start
 
                 self.buffer_a = self.source[
@@ -103,16 +98,7 @@ class TwoBufferReader:
                     block_start + self.buffer_size
                 ]
 
-                if self.trace:
-                    print(
-                        f"[BUFFER] A recarregado: "
-                        f"{old_start} -> "
-                        f"{self.buffer_a_start}"
-                    )
-
             else:
-
-                old_start = self.buffer_b_start
 
                 self.buffer_b_start = block_start
 
@@ -120,13 +106,6 @@ class TwoBufferReader:
                     block_start:
                     block_start + self.buffer_size
                 ]
-
-                if self.trace:
-                    print(
-                        f"[BUFFER] B recarregado: "
-                        f"{old_start} -> "
-                        f"{self.buffer_b_start}"
-                    )
 
     def eof(self) -> bool:
         return self.forward >= len(self.source)
@@ -162,20 +141,6 @@ class TwoBufferReader:
         self._ensure_loaded(self.forward)
 
         char = self.source[self.forward]
-
-        if self.trace:
-
-            buffer_name = self._buffer_for_position(
-                self.forward
-            )
-
-            print(
-                f"[PONTEIROS] "
-                f"begin={self.begin:<4} "
-                f"forward={self.forward:<4} "
-                f"buffer={buffer_name} "
-                f"char={repr(char)}"
-            )
 
         self.forward += 1
 

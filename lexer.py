@@ -1,6 +1,5 @@
 from typing import Optional
 
-from automata import AutomataTrace
 from buffer import TwoBufferReader
 from symbol_table import SymbolTable
 from token_model import Token, TokenType
@@ -40,12 +39,10 @@ class Lexer:
         self,
         source: str,
         buffer_size: int = 32,
-        trace: bool = False,
     ) -> None:
-        self.reader = TwoBufferReader(source, buffer_size, trace)
+        self.reader = TwoBufferReader(source, buffer_size)
         self.symbol_table = SymbolTable()
         self.tokens: list[Token] = []
-        self.trace = AutomataTrace(trace)
 
     def analyze(self) -> list[Token]:
         while not self.reader.eof():
@@ -112,19 +109,15 @@ class Lexer:
             break
 
     def _skip_line_comment(self) -> None:
-        self.trace.transition("START", "/", "COMMENT_LINE")
         self.reader.advance()
         self.reader.advance()
 
         while not self.reader.eof() and self.reader.current() != "\n":
             self.reader.advance()
 
-        self.trace.accepted("COMMENT_IGNORED", self.reader.lexeme())
-
     def _skip_block_comment(self) -> Optional[Token]:
         line = self.reader.begin_line
         column = self.reader.begin_column
-        self.trace.transition("START", "/", "COMMENT_BLOCK")
         self.reader.advance()
         self.reader.advance()
 
@@ -132,7 +125,6 @@ class Lexer:
             if self.reader.current() == "*" and self.reader.peek() == "/":
                 self.reader.advance()
                 self.reader.advance()
-                self.trace.accepted("COMMENT_IGNORED", self.reader.lexeme())
                 return None
             self.reader.advance()
 
@@ -147,23 +139,17 @@ class Lexer:
     def _scan_identifier_or_keyword(self) -> Token:
         line = self.reader.begin_line
         column = self.reader.begin_column
-        state = "START"
-
         while not self.reader.eof():
             char = self.reader.current()
             if char is None or not self._is_identifier_part(char):
                 break
-            self.trace.transition(state, char, "IDENTIFIER")
-            state = "IDENTIFIER"
             self.reader.advance()
 
         lexeme = self.reader.lexeme()
         if lexeme in KEYWORDS:
-            self.trace.accepted("KEYWORD", lexeme)
             return Token(TokenType.KEYWORD, lexeme, line, column)
 
         symbol_id = self.symbol_table.add(lexeme)
-        self.trace.accepted("IDENTIFIER", lexeme)
         return Token(
             TokenType.IDENTIFIER,
             lexeme,
@@ -175,14 +161,10 @@ class Lexer:
     def _scan_number(self) -> Token:
         line = self.reader.begin_line
         column = self.reader.begin_column
-        state = "START"
-
         while not self.reader.eof():
             char = self.reader.current()
             if char is None or not char.isdigit():
                 break
-            self.trace.transition(state, char, "INTEGER")
-            state = "INTEGER"
             self.reader.advance()
 
         if self._starts_identifier_tail():
@@ -196,7 +178,6 @@ class Lexer:
             )
 
         if self.reader.current() == "." and self._peek_is_digit():
-            self.trace.transition(state, ".", "FLOAT_DOT")
             self.reader.advance()
             self._consume_fraction()
 
@@ -211,7 +192,6 @@ class Lexer:
                 )
 
             lexeme = self.reader.lexeme()
-            self.trace.accepted("FLOAT", lexeme)
             return Token(TokenType.FLOAT, lexeme, line, column, float(lexeme))
 
         # O trabalho trata vírgula decimal como um único erro.
@@ -227,7 +207,6 @@ class Lexer:
             )
 
         lexeme = self.reader.lexeme()
-        self.trace.accepted("INTEGER", lexeme)
         return Token(TokenType.INTEGER, lexeme, line, column, int(lexeme))
 
     def _consume_fraction(self) -> None:
@@ -235,7 +214,6 @@ class Lexer:
             char = self.reader.current()
             if char is None or not char.isdigit():
                 break
-            self.trace.transition("FLOAT_DOT", char, "FLOAT")
             self.reader.advance()
 
     def _consume_digits(self) -> None:
@@ -266,7 +244,6 @@ class Lexer:
         decoded: list[str] = []
         terminated = False
 
-        self.trace.transition("START", '"', "STRING")
         self.reader.advance()
 
         while not self.reader.eof():
@@ -297,13 +274,11 @@ class Lexer:
                 "E001", "String não terminada.", lexeme, line, column
             )
 
-        self.trace.accepted("STRING", lexeme)
         return Token(TokenType.STRING, lexeme, line, column, "".join(decoded))
 
     def _scan_char(self) -> Token:
         line = self.reader.begin_line
         column = self.reader.begin_column
-        self.trace.transition("START", "'", "CHAR")
         self.reader.advance()
 
         if self.reader.eof() or self.reader.current() == "\n":
@@ -354,7 +329,6 @@ class Lexer:
 
         self.reader.advance()
         lexeme = self.reader.lexeme()
-        self.trace.accepted("CHAR", lexeme)
         return Token(TokenType.CHAR, lexeme, line, column, repr(decoded_value))
 
     def _consume_until_char_end(self) -> None:
@@ -409,7 +383,6 @@ class Lexer:
     def _operator_token(self, line: int, column: int) -> Token:
         lexeme = self.reader.lexeme()
         token_type = self._operator_type(lexeme)
-        self.trace.accepted(token_type.name, lexeme)
         return Token(token_type, lexeme, line, column)
 
     def _scan_delimiter(self) -> Token:
@@ -417,7 +390,6 @@ class Lexer:
         column = self.reader.begin_column
         self.reader.advance()
         lexeme = self.reader.lexeme()
-        self.trace.accepted("DELIMITER", lexeme)
         return Token(TokenType.DELIMITER, lexeme, line, column)
 
     def _scan_unknown_character(self) -> Token:
@@ -440,7 +412,6 @@ class Lexer:
         line: int,
         column: int,
     ) -> Token:
-        self.trace.error(code, lexeme, message)
         return Token(TokenType.ERROR, lexeme, line, column, f"{code}: {message}")
 
     @staticmethod

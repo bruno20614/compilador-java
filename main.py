@@ -1,3 +1,5 @@
+#Equipe: Bruno Costa Diniz Leandro e Joao Victor Silva Franca
+
 import argparse
 from pathlib import Path
 
@@ -232,15 +234,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--trace",
-        action="store_true",
-        help=(
-            "Mostra transições do AFD "
-            "e begin/forward."
-        ),
-    )
-
-    parser.add_argument(
         "--buffer-size",
         type=int,
         default=32,
@@ -289,7 +282,6 @@ def main():
     lexer = Lexer(
         source=source,
         buffer_size=args.buffer_size,
-        trace=args.trace,
     )
 
     tokens = lexer.analyze()
