@@ -16,7 +16,7 @@ class SymbolTable:
 
     def add(self, lexeme: str) -> int:
         if lexeme in self._symbols:
-            self._symbols[lexeme].occurrences += 1d
+            self._symbols[lexeme].occurrences += 1
             return self._symbols[lexeme].symbol_id
 
         symbol = Symbol(
