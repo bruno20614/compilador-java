@@ -5,6 +5,7 @@ from pathlib import Path
 
 from lexer import Lexer
 from token_model import TokenType
+from sintatico import analyze as analyze_syntax
 
 
 def print_header(title: str):
@@ -252,6 +253,11 @@ def parse_args():
         ),
     )
 
+    parser.add_argument(
+        "--sintatico", action="store_true",
+        help="Executa também análise LL(1), FIRST/FOLLOW, tabela M e trace.",
+    )
+
     return parser.parse_args()
 
 
@@ -300,6 +306,24 @@ def main():
     )
 
     print_errors(tokens)
+
+    if args.sintatico:
+        print_header("ANÁLISE SINTÁTICA LL(1)")
+        lexical_errors = [t for t in tokens if t.token_type == TokenType.ERROR]
+        if lexical_errors:
+            print("Análise sintática não executada: corrija primeiro os erros léxicos.")
+        else:
+            accepted, syntax_errors = analyze_syntax(tokens)
+            if accepted:
+                print("\nVeredito: Aceito com Sucesso — programa sintaticamente válido.")
+            else:
+                print("\nVeredito: programa sintaticamente inválido.")
+                if syntax_errors:
+                    print(f"Erro principal: {syntax_errors[0]}")
+                    if len(syntax_errors) > 1:
+                        print("Erros adicionais durante a recuperação:")
+                        for error in syntax_errors[1:]:
+                            print(f"- {error}")
 
     if args.buffer_view:
 
